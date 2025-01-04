@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import sun.java2d.pipe.NullPipe;
-
 import static lox.TokenType.*;
 
 class Scanner {
