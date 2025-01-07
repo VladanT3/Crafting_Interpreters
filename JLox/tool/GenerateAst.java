@@ -16,10 +16,12 @@ public class GenerateAst {
                 "Binary   : Expr left, Token operator, Expr right",
                 "Grouping : Expr expression",
                 "Literal  : Object value",
-                "Unary    : Token operator, Expr right"));
+                "Unary    : Token operator, Expr right",
+                "Variable : Token name"));
         defineAst(output_dir, "Stmt", Arrays.asList(
                 "Expression : Expr expression",
-                "Print      : Expr expression"));
+                "Print      : Expr expression",
+                "Var        : Token name, Expr initializer"));
     }
 
     private static void defineAst(String output_dir, String base_name, List<String> types) throws IOException {
