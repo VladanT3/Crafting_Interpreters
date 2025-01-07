@@ -56,8 +56,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
 	@Override
 	public Object visitBinaryExpr(Expr.Binary expr) {
-		Object left = evaluate(expr);
-		Object right = evaluate(expr);
+		Object left = evaluate(expr.left);
+		Object right = evaluate(expr.right);
 
 		switch (expr.operator.type) {
 			case MINUS:
