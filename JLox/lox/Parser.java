@@ -54,6 +54,8 @@ class Parser {
 			return new Stmt.Block(block());
 		if (match(IF))
 			return ifStatement();
+		if (match(WHILE))
+			return whileStatement();
 		return expressionStatement();
 	}
 
@@ -252,7 +254,7 @@ class Parser {
 	}
 
 	private Stmt ifStatement() {
-		consume(LEFT_PAREN, "Expect '(' after if.");
+		consume(LEFT_PAREN, "Expect '(' after 'if'.");
 		Expr condition = expression();
 		consume(RIGHT_PAREN, "Expect ')' after if condition.");
 
@@ -286,5 +288,14 @@ class Parser {
 		}
 
 		return expr;
+	}
+
+	private Stmt whileStatement() {
+		consume(LEFT_PAREN, "Expect '(' after 'while'.");
+		Expr condition = expression();
+		consume(RIGHT_PAREN, "Expect ')' after condition.");
+		Stmt body = statement();
+
+		return new Stmt.While(condition, body);
 	}
 }
