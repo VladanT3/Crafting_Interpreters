@@ -52,6 +52,8 @@ class Parser {
 			return printStatement();
 		if (match(LEFT_BRACE))
 			return new Stmt.Block(block());
+		if (match(IF))
+			return ifStatement();
 		return expressionStatement();
 	}
 
@@ -247,5 +249,18 @@ class Parser {
 
 		consume(RIGHT_BRACE, "Expect '}' after block.");
 		return statements;
+	}
+
+	private Stmt ifStatement() {
+		consume(LEFT_PAREN, "Expect '(' after if.");
+		Expr condition = expression();
+		consume(RIGHT_PAREN, "Expect ')' after if condition.");
+
+		Stmt thenBranch = statement();
+		Stmt elseBranch = null;
+		if (match(ELSE))
+			elseBranch = statement();
+
+		return new Stmt.If(condition, thenBranch, elseBranch);
 	}
 }
