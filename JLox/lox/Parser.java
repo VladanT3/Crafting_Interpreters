@@ -2,6 +2,12 @@ package lox;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.sun.org.apache.bcel.internal.generic.RET;
+import com.sun.org.apache.bcel.internal.generic.RETURN;
+
+import jdk.internal.jshell.tool.resources.l10n;
+
 import java.util.Arrays;
 
 import static lox.TokenType.*;
@@ -61,6 +67,8 @@ class Parser {
 			return whileStatement();
 		if (match(FOR))
 			return forStatement();
+		if (match(RETURN))
+			return returnStatement();
 		return expressionStatement();
 	}
 
@@ -386,5 +394,14 @@ class Parser {
 		consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
 		List<Stmt> body = block();
 		return new Stmt.Function(name, parameters, body);
+	}
+
+	private Stmt returnStatement() {
+		Token keyword = previous();
+		Expr value = null;
+		if (!check(SEMICOLON))
+			value = expression();
+		consume(SEMICOLON, "Expect ';' after return value.");
+		return Stmt.Return(keyword, value);
 	}
 }
