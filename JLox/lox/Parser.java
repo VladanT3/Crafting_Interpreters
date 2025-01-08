@@ -2,12 +2,6 @@ package lox;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import com.sun.org.apache.bcel.internal.generic.RET;
-import com.sun.org.apache.bcel.internal.generic.RETURN;
-
-import jdk.internal.jshell.tool.resources.l10n;
-
 import java.util.Arrays;
 
 import static lox.TokenType.*;
@@ -402,6 +396,6 @@ class Parser {
 		if (!check(SEMICOLON))
 			value = expression();
 		consume(SEMICOLON, "Expect ';' after return value.");
-		return Stmt.Return(keyword, value);
+		return new Stmt.Return(keyword, value);
 	}
 }
