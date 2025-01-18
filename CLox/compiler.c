@@ -116,19 +116,23 @@ static void number() {
 	emitConstant(value);
 }
 
+static void parsePrecedence(Precedence precedence) {
+
+}
+
+static void expression() {
+	parsePrecedence(PREC_ASSIGNMENT);
+}
+
 static void grouping() {
 	expression();
 	consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-static void parsePrecedence(Precedence precedence) {
-
-}
-
 static void unary() {
 	TokenType operator_type = parser.previous.type;
-	parsePrecedence(PREC_UNARY)
-		switch (operator_type) {
+	parsePrecedence(PREC_UNARY);
+	switch (operator_type) {
 		case TOKEN_MINUS:
 			emitByte(OP_NEGATE);
 			break;
@@ -137,8 +141,25 @@ static void unary() {
 	}
 }
 
-static void expression() {
-	parsePrecedence(PREC_ASSIGNMENT);
+static void binary() {
+	TokenType operator_type = parser.previous.type;
+	ParseRule* rule = getRule(operator_type);
+	parsePrecedence((Precedence) rule->precedence + 1);
+
+	switch (operator_type) {
+		case TOKEN_PLUS:
+			emitByte(OP_ADD);
+			break;
+		case TOKEN_MINUS:
+			emitByte(OP_SUBTRACT);
+			break;
+		case TOKEN_STAR:
+			emitByte(OP_MULTIPLY);
+			break;
+		case TOKEN_SLASH:
+			emitByte(OP_DIVIDE);
+			break;
+	}
 }
 
 bool compile(const char* source, Chunk* chunk) {
