@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include "chunk.h"
 #include "common.h"
 #include "vm.h"
 #include "debug.h"
@@ -45,6 +46,10 @@ Value pop() {
 
 static Value peek(int distance) {
 	return vm.stack_top[-1 - distance];
+}
+
+static bool isFalsey(Value value) {
+	return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
 
 static InterpretResult run() {
@@ -102,6 +107,29 @@ static InterpretResult run() {
 					return INTERPRET_RUNTIME_ERROR;
 				}
 				push(NUMBER_VAL(-AS_NUMBER(pop())));
+				break;
+			case OP_TRUE:
+				push(BOOL_VAL(true));
+				break;
+			case OP_FALSE:
+				push(BOOL_VAL(false));
+				break;
+			case OP_NIL:
+				push(NIL_VAL);
+				break;
+			case OP_NOT:
+				push(BOOL_VAL(isFalsey(pop())));
+				break;
+			case OP_EQUAL:
+				Value b = pop();
+				Value a = pop();
+				push(BOOL_VAL(valuesEqual(a, b)));
+				break;
+			case OP_GREATER:
+				BINARY_OP(BOOL_VAL, >);
+				break;
+			case OP_LESS:
+				BINARY_OP(BOOL_VAL, <);
 				break;
 		}
 	}
