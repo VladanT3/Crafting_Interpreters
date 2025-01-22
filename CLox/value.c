@@ -55,9 +55,7 @@ bool valuesEqual(Value a, Value b) {
 		case VAL_NIL:
 			return true;
 		case VAL_OBJ:
-			ObjString * a_string = AS_STRING(a);
-			ObjString* b_string = AS_STRING(b);
-			return a_string->length == b_string->length && memcmp(a_string->chars, b_string->chars, a_string->length) == 0;
+			return AS_OBJ(a) == AS_OBJ(b);
 		default:
 			return false;
 	}
