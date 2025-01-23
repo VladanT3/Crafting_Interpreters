@@ -5,6 +5,7 @@
 #include "common.h"
 #include "vm.h"
 #include "debug.h"
+#include "table.h"
 #include "value.h"
 #include "compiler.h"
 #include "object.h"
@@ -176,11 +177,19 @@ static InterpretResult run() {
 			case OP_GET_GLOBAL:
 				ObjString * name1 = READ_STRING();	// name1 because it gives an error that name is being redeclared
 				Value value;
-				if (!tableGet(&vm.globals, name, &value)) {
-					runtimeError("Undefined variable '%s'.", name->chars);
+				if (!tableGet(&vm.globals, name1, &value)) {
+					runtimeError("Undefined variable '%s'.", name1->chars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
 				push(value);
+				break;
+			case OP_SET_GLOBAL:
+				ObjString * name2 = READ_STRING();
+				if (tableSet(&vm.globals, name2, peek(0))) {
+					tableDelete(&vm.globals, name2);
+					runtimeError("Undefined variable '%s'.", name2->chars);
+					return INTERPRET_RUNTIME_ERROR;
+				}
 				break;
 		}
 	}
