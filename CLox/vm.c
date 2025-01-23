@@ -173,6 +173,15 @@ static InterpretResult run() {
 				tableSet(&vm.globals, name, peek(0));
 				pop();
 				break;
+			case OP_GET_GLOBAL:
+				ObjString * name1 = READ_STRING();	// name1 because it gives an error that name is being redeclared
+				Value value;
+				if (!tableGet(&vm.globals, name, &value)) {
+					runtimeError("Undefined variable '%s'.", name->chars);
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				push(value);
+				break;
 		}
 	}
 
