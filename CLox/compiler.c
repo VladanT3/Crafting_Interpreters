@@ -59,6 +59,7 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 static void and_(bool can_assign);
 static void or_(bool can_assign);
+static void varDeclaration();
 
 Parser parser;
 Compiler* current = NULL;
@@ -481,14 +482,59 @@ static void whileStatement() {
 	expression();
 	consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
-	int exitJump = emitJump(OP_JUMP_IF_FALSE);
+	int exit_jump = emitJump(OP_JUMP_IF_FALSE);
 	emitByte(OP_POP);
 	statement();
 
 	emitLoop(loop_start);
 
-	patchJump(exitJump);
+	patchJump(exit_jump);
 	emitByte(OP_POP);
+}
+
+static void forStatement() {
+	beginScope();
+	consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+	if (match(TOKEN_SEMICOLON)) {
+
+	} else if (match(TOKEN_VAR)) {
+		varDeclaration();
+	} else {
+		expressionStatement();
+	}
+
+	int loop_start = currentChunk()->count;
+
+	int exit_jump = -1;
+	if (!match(TOKEN_SEMICOLON)) {
+		expression();
+		consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+
+		exit_jump = emitJump(OP_JUMP_IF_FALSE);
+		emitByte(OP_POP);
+	}
+
+	if (!match(TOKEN_RIGHT_PAREN)) {
+		int body_jump = emitJump(OP_JUMP);
+		int increment_start = currentChunk()->count;
+		expression();
+		emitByte(OP_POP);
+		consume(TOKEN_RIGHT_PAREN, "Expect ')' after 'for' clauses.");
+
+		emitLoop(loop_start);
+		loop_start = increment_start;
+		patchJump(body_jump);
+	}
+
+	statement();
+	emitLoop(loop_start);
+
+	if (exit_jump != -1) {
+		patchJump(exit_jump);
+		emitByte(OP_POP);
+	}
+
+	endScope();
 }
 
 static void statement() {
@@ -502,6 +548,8 @@ static void statement() {
 		ifStatement();
 	} else if (match(TOKEN_WHILE)) {
 		whileStatement();
+	} else if (match(TOKEN_FOR)) {
+		forStatement();
 	} else {
 		expressionStatement();
 	}
