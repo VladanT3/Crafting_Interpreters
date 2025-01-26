@@ -31,7 +31,7 @@ typedef enum {
 	PREC_PRIMARY
 } Precedence;
 
-typedef void (*ParseFn)(bool canAssign);
+typedef void (*ParseFn)(bool can_assign);
 
 typedef struct {
 	ParseFn prefix;
@@ -57,12 +57,12 @@ static bool match(TokenType type);
 static uint8_t identifierConstant(Token * name);
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
-static void and_(bool canAssign);
-static void or_(bool canAssign);
+static void and_(bool can_assign);
+static void or_(bool can_assign);
 
 Parser parser;
 Compiler* current = NULL;
-Chunk* compilingChunk;
+Chunk* compiling_chunk;
 
 static void initCompiler(Compiler* compiler) {
 	compiler->local_count = 0;
@@ -71,7 +71,7 @@ static void initCompiler(Compiler* compiler) {
 }
 
 static Chunk* currentChunk() {
-	return compilingChunk;
+	return compiling_chunk;
 }
 
 static void errorAt(Token* token, const char* message) {
@@ -157,7 +157,7 @@ static void emitConstant(Value value) {
 	emitBytes(OP_CONSTANT, makeConstant(value));
 }
 
-static void number(bool canAssign) {
+static void number(bool can_assign) {
 	double value = strtod(parser.previous.start, NULL);
 	emitConstant(NUMBER_VAL(value));
 }
@@ -170,16 +170,16 @@ static void parsePrecedence(Precedence precedence) {
 		return;
 	}
 
-	bool canAssign = precedence <= PREC_ASSIGNMENT;
-	prefixRule(canAssign);
+	bool can_assign = precedence <= PREC_ASSIGNMENT;
+	prefixRule(can_assign);
 
 	while (precedence <= getRule(parser.current.type)->precedence) {
 		advance();
 		ParseFn infixRule = getRule(parser.previous.type)->infix;
-		infixRule(canAssign);
+		infixRule(can_assign);
 	}
 
-	if (canAssign && match(TOKEN_EQUAL)) {
+	if (can_assign && match(TOKEN_EQUAL)) {
 		error("Invalid assignment target.");
 	}
 }
@@ -188,12 +188,12 @@ static void expression() {
 	parsePrecedence(PREC_ASSIGNMENT);
 }
 
-static void grouping(bool canAssign) {
+static void grouping(bool can_assign) {
 	expression();
 	consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-static void unary(bool canAssign) {
+static void unary(bool can_assign) {
 	TokenType operator_type = parser.previous.type;
 	parsePrecedence(PREC_UNARY);
 	switch (operator_type) {
@@ -208,7 +208,7 @@ static void unary(bool canAssign) {
 	}
 }
 
-static void binary(bool canAssign) {
+static void binary(bool can_assign) {
 	TokenType operator_type = parser.previous.type;
 	ParseRule* rule = getRule(operator_type);
 	parsePrecedence((Precedence) (rule->precedence + 1));
@@ -247,7 +247,7 @@ static void binary(bool canAssign) {
 	}
 }
 
-static void literal(bool canAssign) {
+static void literal(bool can_assign) {
 	switch (parser.previous.type) {
 		case TOKEN_FALSE:
 			emitByte(OP_FALSE);
@@ -263,7 +263,7 @@ static void literal(bool canAssign) {
 	}
 }
 
-static void string(bool canAssign) {
+static void string(bool can_assign) {
 	emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
@@ -289,28 +289,28 @@ static int resolveLocal(Compiler* compiler, Token* name) {
 	return -1;
 }
 
-static void namedVariable(Token name, bool canAssign) {
-	uint8_t getOp, setOp;
+static void namedVariable(Token name, bool can_assign) {
+	uint8_t get_op, set_op;
 	int arg = resolveLocal(current, &name);
 	if (arg != -1) {
-		getOp = OP_GET_LOCAL;
-		setOp = OP_SET_LOCAL;
+		get_op = OP_GET_LOCAL;
+		set_op = OP_SET_LOCAL;
 	} else {
 		arg = identifierConstant(&name);
-		getOp = OP_GET_GLOBAL;
-		setOp = OP_SET_GLOBAL;
+		get_op = OP_GET_GLOBAL;
+		set_op = OP_SET_GLOBAL;
 	}
 
-	if (canAssign && match(TOKEN_EQUAL)) {
+	if (can_assign && match(TOKEN_EQUAL)) {
 		expression();
-		emitBytes(setOp, (uint8_t) arg);
+		emitBytes(set_op, (uint8_t) arg);
 	} else {
-		emitBytes(getOp, (uint8_t) arg);
+		emitBytes(get_op, (uint8_t) arg);
 	}
 }
 
-static void variable(bool canAssign) {
-	namedVariable(parser.previous, canAssign);
+static void variable(bool can_assign) {
+	namedVariable(parser.previous, can_assign);
 }
 
 ParseRule rules[] = {
@@ -428,39 +428,67 @@ static void ifStatement() {
 	expression();
 	consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
-	int thenJump = emitJump(OP_JUMP_IF_FALSE);
+	int then_jump = emitJump(OP_JUMP_IF_FALSE);
 	emitByte(OP_POP);
 	statement();
 
-	int elseJump = emitJump(OP_JUMP);
+	int else_jump = emitJump(OP_JUMP);
 
-	patchJump(thenJump);
+	patchJump(then_jump);
 	emitByte(OP_POP);
 
 	if (match(TOKEN_ELSE)) {
 		statement();
 	}
-	patchJump(elseJump);
+	patchJump(else_jump);
 }
 
-static void and_(bool canAssign) {
-	int endJump = emitJump(OP_JUMP_IF_FALSE);
+static void and_(bool can_assign) {
+	int end_jump = emitJump(OP_JUMP_IF_FALSE);
 
 	emitByte(OP_POP);
 	parsePrecedence(PREC_AND);
 
-	patchJump(endJump);
+	patchJump(end_jump);
 }
 
-static void or_(bool canAssign) {
-	int elseJump = emitJump(OP_JUMP_IF_FALSE);
-	int endJump = emitJump(OP_JUMP);
+static void or_(bool can_assign) {
+	int else_jump = emitJump(OP_JUMP_IF_FALSE);
+	int end_jump = emitJump(OP_JUMP);
 
-	patchJump(elseJump);
+	patchJump(else_jump);
 	emitByte(OP_POP);
 
 	parsePrecedence(PREC_OR);
-	patchJump(endJump);
+	patchJump(end_jump);
+}
+
+static void emitLoop(int loop_start) {
+	emitByte(OP_LOOP);
+
+	int offset = currentChunk()->count - loop_start + 2;
+	if (offset > UINT16_MAX) {
+		error("Loop body too large.");
+	}
+
+	emitByte((offset >> 8) & 0xff);
+	emitByte(offset & 0xff);
+}
+
+static void whileStatement() {
+	int loop_start = currentChunk()->count;
+	consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+	expression();
+	consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+	int exitJump = emitJump(OP_JUMP_IF_FALSE);
+	emitByte(OP_POP);
+	statement();
+
+	emitLoop(loop_start);
+
+	patchJump(exitJump);
+	emitByte(OP_POP);
 }
 
 static void statement() {
@@ -472,6 +500,8 @@ static void statement() {
 		endScope();
 	} else if (match(TOKEN_IF)) {
 		ifStatement();
+	} else if (match(TOKEN_WHILE)) {
+		whileStatement();
 	} else {
 		expressionStatement();
 	}
@@ -591,7 +621,7 @@ bool compile(const char* source, Chunk* chunk) {
 	initScanner(source);
 	Compiler compiler;
 	initCompiler(&compiler);
-	compilingChunk = chunk;
+	compiling_chunk = chunk;
 
 	parser.had_error = false;
 	parser.panic_mode = false;
