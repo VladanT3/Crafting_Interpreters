@@ -70,7 +70,7 @@ static void varDeclaration();
 
 Parser parser;
 Compiler* current = NULL;
-Chunk* compiling_chunk;
+//NOTE: Chunk* compiling_chunk; - remove later?
 
 static void initCompiler(Compiler* compiler, FunctionType type) {
 	compiler->function = NULL;
@@ -688,7 +688,7 @@ ObjFunction* compile(const char* source) {
 	initScanner(source);
 	Compiler compiler;
 	initCompiler(&compiler, TYPE_SCRIPT);
-	compiling_chunk = chunk;
+	//NOTE: compiling_chunk = chunk; - remove later?
 
 	parser.had_error = false;
 	parser.panic_mode = false;
