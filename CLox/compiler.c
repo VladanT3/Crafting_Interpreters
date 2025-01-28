@@ -49,7 +49,8 @@ typedef enum {
 	TYPE_SCRIPT
 } FunctionType;
 
-typedef struct {
+typedef struct Compiler {
+	struct Compiler* enclosing;
 	ObjFunction* function;
 	FunctionType type;
 	Local locals[UINT8_COUNT];
@@ -73,12 +74,17 @@ Compiler* current = NULL;
 //NOTE: Chunk* compiling_chunk; - remove later?
 
 static void initCompiler(Compiler* compiler, FunctionType type) {
+	compiler->enclosing = current;
 	compiler->function = NULL;
 	compiler->type = type;
 	compiler->local_count = 0;
 	compiler->scope_depth = 0;
 	compiler->function = newFunction();
 	current = compiler;
+
+	if (type != TYPE_SCRIPT) {
+		current->function->name = copyString(parser.previous.start, parser.previous.length);
+	}
 
 	Local* local = &current->locals[current->local_count++];
 	local->depth = 0;
@@ -155,6 +161,7 @@ static ObjFunction* endCompiler() {
 	}
 #endif
 
+	current = current->enclosing;
 	return function;
 }
 
@@ -647,6 +654,9 @@ static uint8_t parseVariable(const char* error_message) {
 }
 
 static void markInitialized() {
+	if (current->scope_depth == 0) {
+		return;
+	}
 	current->locals[current->local_count - 1].depth = current->scope_depth;
 }
 
@@ -672,9 +682,42 @@ static void varDeclaration() {
 	defineVariable(global);
 }
 
+static void function(FunctionType type) {
+	Compiler compiler;
+	initCompiler(&compiler, type);
+	beginScope();
+
+	consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+	if (!check(TOKEN_RIGHT_PAREN)) {
+		do {
+			current->function->arity++;
+			if (current->function->arity > 255) {
+				errorAtCurrent("Can't have more than 255 paramaters.");
+			}
+			uint8_t constant = parseVariable("Expect parameter name.");
+			defineVariable(constant);
+		} while (match(TOKEN_COMMA));
+	}
+	consume(TOKEN_RIGHT_PAREN, "Expect ')' after paramaters.");
+	consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
+	block();
+
+	ObjFunction* function = endCompiler();
+	emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
+}
+
+static void funDeclaration() {
+	uint8_t global = parseVariable("Expect function name.");
+	markInitialized();
+	function(TYPE_FUNCTION);
+	defineVariable(global);
+}
+
 static void declaration() {
 	if (match(TOKEN_VAR)) {
 		varDeclaration();
+	} else if (match(TOKEN_FUN)) {
+		funDeclaration();
 	} else {
 		statement();
 	}
