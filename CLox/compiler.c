@@ -68,10 +68,10 @@ static void parsePrecedence(Precedence precedence);
 static void and_(bool can_assign);
 static void or_(bool can_assign);
 static void varDeclaration();
+static bool check(TokenType type);
 
 Parser parser;
 Compiler* current = NULL;
-//NOTE: Chunk* compiling_chunk; - remove later?
 
 static void initCompiler(Compiler* compiler, FunctionType type) {
 	compiler->enclosing = current;
@@ -148,6 +148,7 @@ static void emitByte(uint8_t byte) {
 }
 
 static void emitReturn() {
+	emitByte(OP_NIL);
 	emitByte(OP_RETURN);
 }
 
@@ -340,8 +341,28 @@ static void variable(bool can_assign) {
 	namedVariable(parser.previous, can_assign);
 }
 
+static uint8_t argumentList() {
+	uint8_t arg_count = 0;
+	if (!check(TOKEN_RIGHT_PAREN)) {
+		do {
+			expression();
+			if (arg_count == 255) {
+				error("Can't have more than 255 arguments.");
+			}
+			arg_count++;
+		} while (match(TOKEN_COMMA));
+	}
+	consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
+	return arg_count;
+}
+
+static void call(bool can_assign) {
+	uint8_t arg_count = argumentList();
+	emitBytes(OP_CALL, arg_count);
+}
+
 ParseRule rules[] = {
-	[TOKEN_LEFT_PAREN] = { grouping, NULL, PREC_NONE },
+	[TOKEN_LEFT_PAREN] = { grouping, call, PREC_CALL },
 	[TOKEN_RIGHT_PAREN] = { NULL, NULL, PREC_NONE },
 	[TOKEN_LEFT_BRACE] = { NULL, NULL, PREC_NONE },
 	[TOKEN_RIGHT_BRACE] = { NULL, NULL, PREC_NONE },
@@ -731,7 +752,6 @@ ObjFunction* compile(const char* source) {
 	initScanner(source);
 	Compiler compiler;
 	initCompiler(&compiler, TYPE_SCRIPT);
-	//NOTE: compiling_chunk = chunk; - remove later?
 
 	parser.had_error = false;
 	parser.panic_mode = false;
