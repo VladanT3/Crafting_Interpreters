@@ -13,8 +13,11 @@
 #define AS_FUNCTION(value) ((ObjFunction*)AS_OBJ(value))
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
 #define AS_NATIVE(value) (((ObjNative*)AS_OBJ(value))->function)
+#define IS_CLOSURE(value) isObjType(value, OBJ_CLOSURE)
+#define AS_CLOSURE(value) ((ObjClosure*)AS_OBJ(value))
 
 typedef enum {
+	OBJ_CLOSURE,
 	OBJ_FUNCTION,
 	OBJ_NATIVE,
 	OBJ_STRING
@@ -46,11 +49,17 @@ struct ObjString {
 	uint32_t hash;
 };
 
+typedef struct {
+	Obj obj;
+	ObjFunction* function;
+} ObjClosure;
+
 ObjString* copyString(const char* chars, int length);
 void printObject(Value value);
 ObjString* takeString(char* chars, int length);
 ObjFunction* newFunction();
 ObjNative* newNative(NativeFn function);
+ObjClosure* newClosure(ObjFunction * function);
 
 static inline bool isObjType(Value value, ObjType type) {
 	return IS_OBJ(value) && OBJ_TYPE(value) == type;	//change after && to (AS_OBJ(value)->type) if it eats shit
