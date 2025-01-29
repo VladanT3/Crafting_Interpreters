@@ -33,6 +33,7 @@ typedef struct {
 	int arity;
 	Chunk chunk;
 	ObjString* name;
+	int upvalue_count;
 } ObjFunction;
 
 typedef Value(*NativeFn) (int arg_count, Value * args);
