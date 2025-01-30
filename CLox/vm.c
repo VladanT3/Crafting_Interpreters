@@ -121,7 +121,7 @@ static bool call(ObjClosure* closure, int arg_count) {
 static bool callValue(Value callee, int arg_count) {
 	if (IS_OBJ(callee)) {
 		switch (OBJ_TYPE(callee)) {
-			case OP_CLOSURE:
+			case OBJ_CLOSURE:
 				return call(AS_CLOSURE(callee), arg_count);
 			case OBJ_NATIVE:
 				NativeFn native = AS_NATIVE(callee);

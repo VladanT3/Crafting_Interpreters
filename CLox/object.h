@@ -51,7 +51,7 @@ struct ObjString {
 	uint32_t hash;
 };
 
-typedef struct {
+typedef struct ObjUpvalue {
 	Obj obj;
 	Value* location;
 } ObjUpvalue;
