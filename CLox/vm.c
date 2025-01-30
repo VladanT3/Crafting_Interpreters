@@ -21,6 +21,7 @@ static Value clockNative(int arg_count, Value* args) {
 static void resetStack() {
 	vm.stack_top = vm.stack;
 	vm.frame_count = 0;
+	vm.open_upvalues = NULL;
 }
 
 static void runtimeError(const char* format, ...) {
@@ -139,8 +140,36 @@ static bool callValue(Value callee, int arg_count) {
 }
 
 static ObjUpvalue* captureUpvalue(Value* local) {
+	ObjUpvalue* prev_upvalue = NULL;
+	ObjUpvalue* upvalue = vm.open_upvalues;
+	while (upvalue != NULL && upvalue->location > local) {
+		prev_upvalue = upvalue;
+		upvalue = upvalue->next;
+	}
+
+	if (upvalue != NULL && upvalue->location == local) {
+		return upvalue;
+	}
+
 	ObjUpvalue* createdUpvalue = newUpvalue(local);
+	createdUpvalue->next = upvalue;
+
+	if (prev_upvalue == NULL) {
+		vm.open_upvalues = createdUpvalue;
+	} else {
+		prev_upvalue->next = createdUpvalue;
+	}
+
 	return createdUpvalue;
+}
+
+static void closeUpvalues(Value* last) {
+	while (vm.open_upvalues != NULL && vm.open_upvalues->location >= last) {
+		ObjUpvalue* upvalue = vm.open_upvalues;
+		upvalue->closed = *upvalue->location;
+		upvalue->location = &upvalue->closed;
+		vm.open_upvalues = upvalue->next;
+	}
 }
 
 static InterpretResult run() {
@@ -179,6 +208,7 @@ static InterpretResult run() {
 		switch (instruction = READ_BYTE()) {
 			case OP_RETURN:
 				Value result = pop();
+				closeUpvalues(frame->slots);
 				vm.frame_count--;
 				if (vm.frame_count == 0) {
 					pop();
@@ -323,7 +353,10 @@ static InterpretResult run() {
 				uint8_t slot3 = READ_BYTE();
 				*frame->closure->upvalues[slot3]->location = peek(0);
 				break;
-
+			case OP_CLOSE_UPVALUE:
+				closeUpvalues(vm.stack_top - 1);
+				pop();
+				break;
 		}
 	}
 
