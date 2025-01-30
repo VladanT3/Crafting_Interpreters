@@ -70,6 +70,9 @@ void printObject(Value value) {
 		case OBJ_CLOSURE:
 			printFunction(AS_CLOSURE(value)->function);
 			break;
+		case OBJ_UPVALUE:
+			printf("upvalue");
+			break;
 	}
 }
 
@@ -100,7 +103,20 @@ ObjNative* newNative(NativeFn function) {
 }
 
 ObjClosure* newClosure(ObjFunction* function) {
+	ObjUpvalue** upvalues = ALLOCATE(ObjUpvalue *, function->upvalue_count);
+	for (int i = 0; i < function->upvalue_count; i++) {
+		upvalues[i] = NULL;
+	}
+
 	ObjClosure* closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE);
 	closure->function = function;
+	closure->upvalues = upvalues;
+	closure->upvalue_count = function->upvalue_count;
 	return closure;
+}
+
+ObjUpvalue* newUpvalue(Value* slot) {
+	ObjUpvalue* upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);
+	upvalue->location = slot;
+	return upvalue;
 }

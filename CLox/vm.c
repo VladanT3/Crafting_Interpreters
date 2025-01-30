@@ -138,6 +138,11 @@ static bool callValue(Value callee, int arg_count) {
 	return false;
 }
 
+static ObjUpvalue* captureUpvalue(Value* local) {
+	ObjUpvalue* createdUpvalue = newUpvalue(local);
+	return createdUpvalue;
+}
+
 static InterpretResult run() {
 	CallFrame* frame = &vm.frames[vm.frame_count - 1];
 
@@ -300,7 +305,25 @@ static InterpretResult run() {
 				ObjFunction * function = AS_FUNCTION(READ_CONSTANT());
 				ObjClosure* closure = newClosure(function);
 				push(OBJ_VAL(closure));
+				for (int i = 0; i < closure->upvalue_count; i++) {
+					uint8_t is_local = READ_BYTE();
+					uint8_t index = READ_BYTE();
+					if (is_local) {
+						closure->upvalues[i] = captureUpvalue(frame->slots + index);
+					} else {
+						closure->upvalues[i] = frame->closure->upvalues[index];
+					}
+				}
 				break;
+			case OP_GET_UPVALUE:
+				uint8_t slot2 = READ_BYTE();
+				push(*frame->closure->upvalues[slot2]->location);
+				break;
+			case OP_SET_UPVALUE:
+				uint8_t slot3 = READ_BYTE();
+				*frame->closure->upvalues[slot3]->location = peek(0);
+				break;
+
 		}
 	}
 
