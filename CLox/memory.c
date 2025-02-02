@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "memory.h"
 #include "object.h"
+#include "value.h"
 #include "vm.h"
 #include "compiler.h"
 #ifdef DEBUG_LOG_GC
@@ -64,10 +65,15 @@ void freeObjects() {
 		freeObject(object);
 		object = next;
 	}
+
+	free(vm.gray_stack);
 }
 
 void markObject(Obj* object) {
 	if (object == NULL) {
+		return;
+	}
+	if (object->is_marked) {
 		return;
 	}
 #ifdef DEBUG_LOG_GC
@@ -77,6 +83,17 @@ void markObject(Obj* object) {
 #endif
 
 	object->is_marked = true;
+
+	if (vm.gray_capacity < vm.gray_count + 1) {
+		vm.gray_capacity = GROW_CAPACITY(vm.gray_capacity);
+		vm.gray_stack = (Obj **) realloc(vm.gray_stack, sizeof(Obj *) * vm.gray_capacity);
+	}
+
+	if (vm.gray_stack == NULL) {
+		exit(1);
+	}
+
+	vm.gray_stack[vm.gray_count++] = object;
 }
 
 void markValue(Value value) {
@@ -102,12 +119,55 @@ static void markRoots() {
 	markCompilerRoots();
 }
 
+static void markArray(ValueArray* array) {
+	for (int i = 0; i < array->count; i++) {
+		markValue(array->values[i]);
+	}
+}
+
+static void blackenObject(Obj* object) {
+#ifdef DEBUG_LOG_GC
+	printf("%p blacken ", (void *)object);
+	printValue(OBJ_VAL(object));
+	printf("\n");
+#endif
+
+	switch (object->type) {
+		case OBJ_UPVALUE:
+			markValue(((ObjUpvalue *) object)->closed);
+			break;
+		case OBJ_FUNCTION:
+			ObjFunction * function = (ObjFunction *) object;
+			markObject((Obj *) function->name);
+			markArray(&function->chunk.constants);
+			break;
+		case OBJ_CLOSURE:
+			ObjClosure * closure = (ObjClosure *) object;
+			markObject((Obj *) closure->function);
+			for (int i = 0; i < closure->upvalue_count; i++) {
+				markObject((Obj *) closure->upvalues[i]);
+			}
+			break;
+		case OBJ_NATIVE:
+		case OBJ_STRING:
+			break;
+	}
+}
+
+static void traceReference() {
+	while (vm.gray_count > 0) {
+		Obj* object = vm.gray_stack[--vm.gray_count];
+		blackenObject(object);
+	}
+}
+
 void collectGarbage() {
 #ifdef DEBUG_LOG_GC
 	printf("-- gc begin\n");
 #endif
 
 	markRoots();
+	traceReference();
 
 #ifdef DEBUG_LOG_GC
 	printf("-- gc end\n");
