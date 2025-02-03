@@ -4,6 +4,7 @@
 #include "common.h"
 #include "value.h"
 #include "chunk.h"
+#include "table.h"
 
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 #define IS_STRING(value) isObjType(value, OBJ_STRING)
@@ -17,11 +18,14 @@
 #define AS_CLOSURE(value) ((ObjClosure*)AS_OBJ(value))
 #define IS_CLASS(value) isObjType(value, OBJ_CLASS)
 #define AS_CLASS(value) ((ObjClass*)AS_OBJ(value))
+#define IS_INSTANCE(value) isObjType(value, OBJ_INSTANCE)
+#define AS_INSTANCE(value) ((ObjInstance*)AS_OBJ(value))
 
 typedef enum {
 	OBJ_CLASS,
 	OBJ_CLOSURE,
 	OBJ_FUNCTION,
+	OBJ_INSTANCE,
 	OBJ_NATIVE,
 	OBJ_STRING,
 	OBJ_UPVALUE
@@ -74,6 +78,12 @@ typedef struct {
 	ObjString* name;
 } ObjClass;
 
+typedef struct {
+	Obj obj;
+	ObjClass* klass;
+	Table fields;
+} ObjInstance;
+
 ObjString* copyString(const char* chars, int length);
 void printObject(Value value);
 ObjString* takeString(char* chars, int length);
@@ -82,6 +92,7 @@ ObjNative* newNative(NativeFn function);
 ObjClosure* newClosure(ObjFunction * function);
 ObjUpvalue* newUpvalue(Value * slot);
 ObjClass* newClass(ObjString * name);
+ObjInstance* newInstance(ObjClass * klass);
 
 static inline bool isObjType(Value value, ObjType type) {
 	return IS_OBJ(value) && OBJ_TYPE(value) == type;	//change after && to (AS_OBJ(value)->type) if it eats shit
