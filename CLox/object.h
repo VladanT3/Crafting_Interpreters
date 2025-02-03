@@ -15,8 +15,11 @@
 #define AS_NATIVE(value) (((ObjNative*)AS_OBJ(value))->function)
 #define IS_CLOSURE(value) isObjType(value, OBJ_CLOSURE)
 #define AS_CLOSURE(value) ((ObjClosure*)AS_OBJ(value))
+#define IS_CLASS(value) isObjType(value, OBJ_CLASS)
+#define AS_CLASS(value) ((ObjClass*)AS_OBJ(value))
 
 typedef enum {
+	OBJ_CLASS,
 	OBJ_CLOSURE,
 	OBJ_FUNCTION,
 	OBJ_NATIVE,
@@ -66,6 +69,11 @@ typedef struct {
 	int upvalue_count;
 } ObjClosure;
 
+typedef struct {
+	Obj obj;
+	ObjString* name;
+} ObjClass;
+
 ObjString* copyString(const char* chars, int length);
 void printObject(Value value);
 ObjString* takeString(char* chars, int length);
@@ -73,6 +81,7 @@ ObjFunction* newFunction();
 ObjNative* newNative(NativeFn function);
 ObjClosure* newClosure(ObjFunction * function);
 ObjUpvalue* newUpvalue(Value * slot);
+ObjClass* newClass(ObjString * name);
 
 static inline bool isObjType(Value value, ObjType type) {
 	return IS_OBJ(value) && OBJ_TYPE(value) == type;	//change after && to (AS_OBJ(value)->type) if it eats shit

@@ -62,6 +62,9 @@ static void freeObject(Obj* object) {
 		case OBJ_UPVALUE:
 			FREE(ObjUpvalue, object);
 			break;
+		case OBJ_CLASS:
+			FREE(ObjClass, object);
+			break;
 	}
 }
 
@@ -154,6 +157,10 @@ static void blackenObject(Obj* object) {
 			for (int i = 0; i < closure->upvalue_count; i++) {
 				markObject((Obj *) closure->upvalues[i]);
 			}
+			break;
+		case OBJ_CLASS:
+			ObjClass * klass = (ObjClass *) object;
+			markObject((Obj *) klass->name);
 			break;
 		case OBJ_NATIVE:
 		case OBJ_STRING:
