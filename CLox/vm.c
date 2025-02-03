@@ -371,6 +371,36 @@ static InterpretResult run() {
 			case OP_CLASS:
 				push(OBJ_VAL(newClass(READ_STRING())));
 				break;
+			case OP_GET_PROPERTY:
+				if (!IS_INSTANCE(peek(0))) {
+					runtimeError("Only instances have properties.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				ObjInstance* instance = AS_INSTANCE(peek(0));
+				ObjString* name3 = READ_STRING();
+
+				Value value1;
+				if (tableGet(&instance->fields, name3, &value1)) {
+					pop();
+					push(value1);
+					break;
+				}
+
+				runtimeError("Undefined property '%s'.", name3->chars);
+				return INTERPRET_RUNTIME_ERROR;
+			case OP_SET_PROPERTY:
+				if (!IS_INSTANCE(peek(1))) {
+					runtimeError("Only instances have fields.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				ObjInstance* instance1 = AS_INSTANCE(peek(1));
+				tableSet(&instance1->fields, READ_STRING(), peek(0));
+				Value value2 = pop();
+				pop();
+				push(value2);
+				break;
 		}
 	}
 
