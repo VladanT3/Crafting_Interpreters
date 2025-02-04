@@ -20,8 +20,11 @@
 #define AS_CLASS(value) ((ObjClass*)AS_OBJ(value))
 #define IS_INSTANCE(value) isObjType(value, OBJ_INSTANCE)
 #define AS_INSTANCE(value) ((ObjInstance*)AS_OBJ(value))
+#define IS_BOUND_METHOD(value) isObjType(value, OBJ_BOUND_METHOD)
+#define AS_BOUND_METHOD(value) ((ObjBoundMethod*)AS_OBJ(value))
 
 typedef enum {
+	OBJ_BOUND_METHOD,
 	OBJ_CLASS,
 	OBJ_CLOSURE,
 	OBJ_FUNCTION,
@@ -85,6 +88,12 @@ typedef struct {
 	Table fields;
 } ObjInstance;
 
+typedef struct {
+	Obj obj;
+	Value receiver;
+	ObjClosure* method;
+} ObjBoundMethod;
+
 ObjString* copyString(const char* chars, int length);
 void printObject(Value value);
 ObjString* takeString(char* chars, int length);
@@ -94,6 +103,7 @@ ObjClosure* newClosure(ObjFunction * function);
 ObjUpvalue* newUpvalue(Value * slot);
 ObjClass* newClass(ObjString * name);
 ObjInstance* newInstance(ObjClass * klass);
+ObjBoundMethod* newBoundMethod(Value receiver, ObjClosure * method);
 
 static inline bool isObjType(Value value, ObjType type) {
 	return IS_OBJ(value) && OBJ_TYPE(value) == type;	//change after && to (AS_OBJ(value)->type) if it eats shit

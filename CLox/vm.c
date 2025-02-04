@@ -141,6 +141,9 @@ static bool callValue(Value callee, int arg_count) {
 				ObjClass * klass = AS_CLASS(callee);
 				vm.stack_top[-arg_count - 1] = OBJ_VAL(newInstance(klass));
 				return true;
+			case OBJ_BOUND_METHOD:
+				ObjBoundMethod * bound = AS_BOUND_METHOD(callee);
+				return call(bound->method, arg_count);
 			default:
 				break;
 		}
@@ -188,6 +191,20 @@ static void defineMethod(ObjString* name) {
 	ObjClass* klass = AS_CLASS(peek(1));
 	tableSet(&klass->methods, name, method);
 	pop();
+}
+
+static bool bindMethod(ObjClass* klass, ObjString* name) {
+	Value method;
+	if (!tableGet(&klass->methods, name, &method)) {
+		runtimeError("Undefined property '%s'.", name->chars);
+		return false;
+	}
+
+	ObjBoundMethod* bound = newBoundMethod(peek(0), AS_CLOSURE(method));
+
+	pop();
+	push(OBJ_VAL(bound));
+	return true;
 }
 
 static InterpretResult run() {
@@ -394,8 +411,10 @@ static InterpretResult run() {
 					break;
 				}
 
-				runtimeError("Undefined property '%s'.", name3->chars);
-				return INTERPRET_RUNTIME_ERROR;
+				if (!bindMethod(instance->klass, name3)) {
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				break;
 			case OP_SET_PROPERTY:
 				if (!IS_INSTANCE(peek(1))) {
 					runtimeError("Only instances have fields.");
