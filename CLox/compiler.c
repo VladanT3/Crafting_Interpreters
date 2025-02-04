@@ -436,6 +436,10 @@ static void dot(bool can_assign) {
 	if (can_assign && match(TOKEN_EQUAL)) {
 		expression();
 		emitBytes(OP_SET_PROPERTY, name);
+	} else if (match(TOKEN_LEFT_PAREN)) {
+		uint8_t arg_count = argumentList();
+		emitBytes(OP_INVOKE, name);
+		emitByte(arg_count);
 	} else {
 		emitBytes(OP_GET_PROPERTY, name);
 	}
@@ -858,7 +862,7 @@ static void method() {
 	consume(TOKEN_IDENTIFIER, "Expect method name.");
 	uint8_t constant = identifierConstant(&parser.previous);
 	FunctionType type = TYPE_METHOD;
-	if (parser.previous.type == 4 && memcmp(parser.previous.start, "init", 4) == 0) {
+	if (parser.previous.length == 4 && memcmp(parser.previous.start, "init", 4) == 0) {
 		type = TYPE_INITIALIZER;
 	}
 	function(type);
