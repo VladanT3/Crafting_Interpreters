@@ -29,6 +29,7 @@ typedef struct {
 	Obj** gray_stack;
 	size_t bytes_allocated;
 	size_t next_GC;
+	ObjString* initString;
 } VM;
 
 typedef enum {
