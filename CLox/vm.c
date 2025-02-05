@@ -488,6 +488,23 @@ static InterpretResult run() {
 				tableAddAll(&AS_CLASS(superclass)->methods, &subclass->methods);
 				pop();
 				break;
+			case OP_GET_SUPER:
+				ObjString * name4 = READ_STRING();
+				ObjClass* superclass1 = AS_CLASS(pop());
+
+				if (!bindMethod(superclass1, name4)) {
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				break;
+			case OP_SUPER_INVOKE:
+				ObjString * method1 = READ_STRING();
+				int arg_count2 = READ_BYTE();
+				ObjClass* superclass2 = AS_CLASS(pop());
+				if (!invokeFromClass(superclass2, method1, arg_count2)) {
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				frame = &vm.frames[vm.frame_count - 1];
+				break;
 		}
 	}
 
